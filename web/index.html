@@ -143,26 +143,44 @@
   <script src="ubi-operators.js" onerror="window.__r6DataScriptError('ubi-operators.js')"></script>
   <script>
     (() => {
-      const LAUNCH_TIPS = [
+      // Loading line: a random operator quote from the lore bundle
+      // (bundle scripts above already ran, so R6_LORE/R6_DATABASE exist).
+      // Label shows the operator's name instead of "Tip".
+      const FALLBACK_TIPS = [
         'Drone first, peek second.',
-        'Vertical play wins rounds. Open the floor above the site.',
-        'A default plant beats a hero play.',
-        'Mute jammers stop more than drones.',
-        'Reinforce the right walls, not every wall.',
-        'Sound is intel. Stop sprinting when it matters.',
-        'One ping can save a round. Ping the defuser.',
         'Check your corners, then check them again.',
-        'Utility wins executes. Save a smoke for the plant.',
-        'Nerf Jackal.',
-        'Do not peek everything at once.',
         'The defuser wins games. Protect the carrier.',
       ];
+      const pickQuote = () => {
+        try {
+          const ops = ((typeof R6_DATABASE !== 'undefined' && R6_DATABASE && R6_DATABASE.operators) || [])
+            .filter((o) => o && o.id && o.name);
+          const lore = (typeof R6_LORE !== 'undefined' && R6_LORE) || {};
+          const pool = [];
+          ops.forEach((o) => {
+            const qs = (lore[o.id] && lore[o.id].quotes) || [];
+            qs.forEach((q) => {
+              const text = String(q || '').replace(/^["“”'\s]+|["“”'\s]+$/g, '').trim();
+              if (text && text.length <= 160) pool.push({ text, name: o.name });
+            });
+          });
+          if (pool.length) return pool[Math.floor(Math.random() * pool.length)];
+        } catch { /* fall through to static fallback */ }
+        return null;
+      };
       const overlay = document.getElementById('launch-overlay');
       const tipEl = document.getElementById('launch-overlay-tip');
       const startedAt = Date.now();
       const LAUNCH_OVERLAY_MIN_MS = 400;
+      const quote = pickQuote();
       if (tipEl) {
-        tipEl.textContent = LAUNCH_TIPS[Math.floor(Math.random() * LAUNCH_TIPS.length)];
+        if (quote) {
+          tipEl.textContent = '\u201c' + quote.text + '\u201d';
+          const labelEl = overlay ? overlay.querySelector('.launch-tip-label') : null;
+          if (labelEl) labelEl.textContent = quote.name;
+        } else {
+          tipEl.textContent = FALLBACK_TIPS[Math.floor(Math.random() * FALLBACK_TIPS.length)];
+        }
       }
       window.__hideLaunchOverlay = (immediate = false) => {
         if (!overlay || overlay.dataset.hidden === 'true') return;
